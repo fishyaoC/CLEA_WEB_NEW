@@ -1,0 +1,80 @@
+﻿<!--後台menu-->
+@using Azure;
+@using Microsoft.AspNetCore.Http;
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor;
+@* @using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService *@
+@using Clea_Web.Models;
+@using Clea_Web.Service;
+@{
+    Layout = null;
+
+    dbContext db = new dbContext();
+    BaseService baseService = new BaseService();
+    List<ViewMenuRolePower> viewMenu = new List<ViewMenuRolePower>();
+    Guid R_UID = Guid.Empty;
+
+    var claims = Context.User.Identities.FirstOrDefault().Claims.ToArray();
+
+    String RoleId = claims[2].Value;
+    String Type = claims[4].Value.Equals("True") ? "B" : "P";
+    if (string.IsNullOrEmpty(RoleId))
+    {
+        Context.Response.Redirect(Url.Action("Index", "Sys_Login"));
+    }
+    else
+    {
+        R_UID = Guid.Parse(RoleId);
+        // R_UID = Guid.Parse(HttpContextAccessor.HttpContext.Session.GetString("role"));
+        viewMenu = db.ViewMenuRolePowers.Where(x => x.RUid == R_UID && x.MLevel == 1 && x.SearchData == true && x.MType.Equals(Type)).OrderBy(x => x.MOrder).ToList();
+    }
+}
+
+<nav class="sidebar sidebar-offcanvas" id="sidebar">
+    <ul class="nav">
+
+        @if (viewMenu.Count > 0)
+        {
+            Int32 conum = 0;
+            foreach (ViewMenuRolePower LV1 in viewMenu)
+            {
+                String co = "ui-" + conum.ToString();
+
+                List<SysMenu> LV2 = new List<SysMenu>();
+                LV2 = db.SysMenus.Where(x => x.MLevel == 2 && x.MParentId == LV1.MId && x.MIsActice == true).OrderBy(x => x.MOrder).ToList();
+
+                if (LV2.Count > 0)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link" data-toggle="collapse" href="#@co" aria-expanded="false" aria-controls="ui-basic">
+                            <i class="icon-layout menu-icon"></i>
+                            <span class="menu-title">@LV1.MName</span>
+                            <i class="menu-arrow"></i>
+                        </a>
+                        <div class="collapse" id="@co">
+                            <ul class="nav flex-column sub-menu">
+                                @foreach (SysMenu lv2 in LV2)
+                                {
+                                    <li class="nav-item"> <a class="nav-link" href="@lv2.MUrl">@lv2.MName</a></li>
+                                }
+                            </ul>
+                        </div>
+                    </li>
+                }
+                else
+                {
+                    <li class="nav-item">
+                        <a class="nav-link" href="@LV1.MUrl">
+                            <i class="icon-grid menu-icon"></i>
+                            <span class="menu-title">@LV1.MName</span>
+                        </a>
+                    </li>
+                }
+                conum++;
+            }
+
+        }
+
+        
+    </ul>
+</nav>
